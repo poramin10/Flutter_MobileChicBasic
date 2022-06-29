@@ -1,5 +1,7 @@
 // ignore_for_file: unused_local_variable, await_only_futures, body_might_complete_normally_nullable, avoid_print, prefer_interpolation_to_compose_strings
 
+import 'package:dio/dio.dart';
+import 'package:project_mobile/models/result.dart';
 import 'package:project_mobile/models/user.dart';
 import 'package:project_mobile/repositories/base/base_repository.dart';
 import 'package:project_mobile/repositories/url/api_url.dart';
@@ -35,6 +37,13 @@ class UserRepository {
     return false;
   }
 
+  Future<Result<dynamic>> postImg(FormData formData) async {
+    return await BaseRepository.baseDio
+        .post(ApiURL.userAPI.upload, data: formData)
+        .asResult();
+    
+  }
+
   Future<bool> putUser(User user) async {
     var result = await BaseRepository.baseDio
         .put(ApiURL.userAPI.user, data: user)
@@ -47,16 +56,14 @@ class UserRepository {
   }
 
   Future<bool> deleteUser(User user) async {
-    
-      print('Delete');
-      var result = await BaseRepository.baseDio
-          .delete(ApiURL.userAPI.user + '/' + user.id.toString())
-          .asResult();
-      if (result.success == true) {
-        return true;
-      }else{
-        return false;
-      }
-   
+    print('Delete');
+    var result = await BaseRepository.baseDio
+        .delete(ApiURL.userAPI.user + '/' + user.id.toString())
+        .asResult();
+    if (result.success == true) {
+      return true;
+    } else {
+      return false;
+    }
   }
 }

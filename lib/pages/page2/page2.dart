@@ -24,7 +24,7 @@ class Page2 extends StatelessWidget {
           Center(child: Text('ข้อมูลบัตรประชาชน')),
           Center(child: Text('ผู้ใหญ่')),
           Center(child: Text('กู้ใหญ่')),
-          Center(child: Text("'กู้ใช้'")),
+          Center(child: Text('''กู้ใช้''')),
           Center(child: Text('เพิ่มผู้ใช้ สำเร็จแล้ว')),
           Container(
             height: 60,

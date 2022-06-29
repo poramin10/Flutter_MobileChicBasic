@@ -17,7 +17,7 @@ class User {
   String? firstname;
   String? lastname;
   String? phone;
-  String? img_profile = 'image';
+  String? img_profile = '';
   DateTime? create_at = DateTime.now();
   DateTime? update_at = DateTime.now();
   int? purchase_order = 0;
@@ -33,7 +33,7 @@ class User {
       this.firstname,
       this.lastname,
       this.phone,
-      String? img_profile,
+      this.img_profile,
       DateTime? create_at,
       DateTime? update_at,
       int? purchase_order,

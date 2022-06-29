@@ -18,19 +18,5 @@ class   BaseRepository {
       ..options.receiveTimeout = env.apiConfig!.receiveTimeout!
       ..options.connectTimeout = env.apiConfig!.connectTimeout!
       ..interceptors.add(CustomInterceptors(context));
-
-    if (kDebugMode) {
-      // //TODO: remove this function in production
-      (baseDio.httpClientAdapter as DefaultHttpClientAdapter)
-          .onHttpClientCreate = (HttpClient client) {
-        client.badCertificateCallback =
-            (X509Certificate cert, String host, int port) {
-          final isValidHost =
-              ["192.168.1.149"].contains(host); // <-- allow only hosts in array
-          return isValidHost;
-        };
-        return client;
-      };
-    }
   }
 }

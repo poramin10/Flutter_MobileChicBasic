@@ -1,7 +1,12 @@
 // ignore_for_file: prefer_const_constructors, unused_import, camel_case_types, non_constant_identifier_names, unused_local_variable, no_leading_underscores_for_local_identifiers, duplicate_ignore, void_checks, prefer_if_null_operators, use_build_context_synchronously
 
+import 'dart:io';
+
+import 'package:dio/dio.dart';
 import 'package:dropdown_button2/dropdown_button2.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:project_mobile/models/user.dart';
 import 'package:project_mobile/pages/createuser/createuser.dart';
 import 'package:project_mobile/repositories/branch_repository.dart';
@@ -27,14 +32,17 @@ class _DataUserState extends State<DataUser> {
   final BranchRepository _branchRepository = BranchRepository();
   int? branchIdActive;
 
+  String createImgPath(serverPath) {
+    //! ต้อง Replace ด้วย เพราะ Flutter ไม่ได้ปรับให้
+    return 'https://192.168.1.181:5001/$serverPath'.replaceAll('\\', '/');
+  }
+
   Future<void> getUser() async {
     var userList = await _userRepository.getUser() ?? [];
     var branchList = await _branchRepository.getBranch() ?? [];
-     Provider.of<BaseState>(context, listen: false).setUserList(userList);
+    Provider.of<BaseState>(context, listen: false).setUserList(userList);
     Provider.of<BaseState>(context, listen: false).setBranchList(branchList);
   }
-
-
 
   @override
   void initState() {
@@ -45,7 +53,6 @@ class _DataUserState extends State<DataUser> {
   @override
   Widget build(BuildContext context) {
     final formKey = GlobalKey<FormState>();
-
     return Scaffold(
       appBar: AppBar(title: Text('DataUser')),
       body: FutureBuilder<void>(
@@ -209,96 +216,212 @@ class _DataUserState extends State<DataUser> {
     );
   }
 
-  AlertDialog EditUserForm(User d, GlobalKey<FormState> formKey,
+  StatefulBuilder EditUserForm(User d, GlobalKey<FormState> formKey,
       BuildContext context, BaseState baseState) {
     // String textValueUsername = '';
-
     final _valueUsername = TextEditingController();
+    print(createImgPath(d.img_profile));
 
-    return AlertDialog(
-      title: Text('ผู้ใช้: ${d.firstname} ${d.lastname}'),
-      content: SingleChildScrollView(
-        child: Padding(
-          padding: EdgeInsets.all(8.0),
-          child: Form(
-            key: formKey,
-            child: Column(
-              children: [
-                TextFormField(
-                  enabled: false,
-                  initialValue: "${d.username}",
-                  decoration: const InputDecoration(
-                    border: UnderlineInputBorder(),
-                    labelText: 'Username',
+    XFile? _imageFile;
+    bool checkImg = false;
+    dynamic _pickImageError;
+    String? _retrieveDataError;
+    final ImagePicker _picker = ImagePicker();
+
+    return StatefulBuilder(builder: (context, setState) {
+      void _setImageFileListFromFile(XFile? value) {
+        _imageFile = value == null ? null : value;
+      }
+
+      Text? _getRetrieveErrorWidget() {
+        if (_retrieveDataError != null) {
+          final Text result = Text(_retrieveDataError!);
+          _retrieveDataError = null;
+          return result;
+        }
+        return null;
+      }
+
+      Future<void> _onImageButtonPressedAlert(ImageSource source,
+          {BuildContext? context, bool isMultiImage = false}) async {
+        try {
+          final XFile? pickedFile = await _picker.pickImage(
+            source: source,
+            maxWidth: 250,
+            maxHeight: 250,
+            imageQuality: 20,
+          );
+          setState.call(() {
+            _setImageFileListFromFile(pickedFile);
+          });
+        } catch (e) {
+          setState(() {
+            _pickImageError = e;
+          });
+        }
+      }
+
+      Widget _previewImages(String? imgProfile) {
+        // ? --> เช็คว่ามี Error อะไรรึเปล่า
+        final Text? retrieveError = _getRetrieveErrorWidget();
+        if (retrieveError != null) {
+          return retrieveError;
+        }
+        if (_imageFile != null) {
+          print(_imageFile!.path);
+          return Semantics(
+              label: 'image_picker_example_picked_images',
+              child: Semantics(
+                label: 'image_picker_example_picked_image',
+                child: kIsWeb
+                    ? Image.network(_imageFile!.path)
+                    : Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          GestureDetector(
+                            child: CircleAvatar(
+                              backgroundImage:
+                                  FileImage(File(_imageFile!.path)),
+                              radius: 110,
+                            ),
+                            onTap: () {
+                              _onImageButtonPressedAlert(ImageSource.gallery,
+                                  context: context);
+                            },
+                          ),
+                        ],
+                      ),
+              ));
+        } else if (_pickImageError != null) {
+          return Text(
+            'Pick image error: $_pickImageError',
+            textAlign: TextAlign.center,
+          );
+        } else {
+          return GestureDetector(
+            child: CircleAvatar(
+              radius: 112,
+              backgroundColor: Color.fromARGB(255, 0, 0, 0),
+              child: CircleAvatar(
+                backgroundImage: NetworkImage(createImgPath(imgProfile)),
+                radius: 110,
+              ),
+            ),
+            onTap: () {
+              _onImageButtonPressedAlert(ImageSource.gallery, context: context);
+            },
+          );
+        }
+      }
+
+      // setState.call(() {
+      //   _setImageFileListFromFile(pickedFile);
+      // });
+
+      return AlertDialog(
+        title: Text('ผู้ใช้: ${d.firstname} ${d.lastname}'),
+        content: SingleChildScrollView(
+          child: Padding(
+            padding: EdgeInsets.all(8.0),
+            child: Form(
+              key: formKey,
+              child: Column(
+                children: [
+                  _previewImages(d.img_profile),
+                  TextFormField(
+                    enabled: false,
+                    initialValue: "${d.username}",
+                    decoration: const InputDecoration(
+                      border: UnderlineInputBorder(),
+                      labelText: 'Username',
+                    ),
                   ),
-                ),
-                TextFormField(
-                  initialValue: "${d.firstname}",
-                  validator: (value) {
-                    // RegExp regex = new RegExp(r'^.{3,}$');
-                    if (value!.isEmpty) {
-                      return ("กรุณากรอกชื่อผู้ใช้");
-                    }
-                    // if (!regex.hasMatch(value)) {
-                    //   return ("กรุณากรอกชื่อผู้ใช้มากกว่า 3 ตัวอักษร");
-                    // }
-                    return null;
-                  },
-                  onSaved: (String? firstnameValue) {
-                    firstname = firstnameValue!;
-                  },
-                  decoration: const InputDecoration(
-                    border: UnderlineInputBorder(),
-                    labelText: 'ชื่อ',
+                  TextFormField(
+                    initialValue: "${d.firstname}",
+                    validator: (value) {
+                      // RegExp regex = new RegExp(r'^.{3,}$');
+                      if (value!.isEmpty) {
+                        return ("กรุณากรอกชื่อผู้ใช้");
+                      }
+                      // if (!regex.hasMatch(value)) {
+                      //   return ("กรุณากรอกชื่อผู้ใช้มากกว่า 3 ตัวอักษร");
+                      // }
+                      return null;
+                    },
+                    onSaved: (String? firstnameValue) {
+                      firstname = firstnameValue!;
+                    },
+                    decoration: const InputDecoration(
+                      border: UnderlineInputBorder(),
+                      labelText: 'ชื่อ',
+                    ),
                   ),
-                ),
-                TextFormField(
-                  initialValue: "${d.lastname}",
-                  onSaved: (String? lastnameValue) {
-                    lastname = lastnameValue!;
-                  },
-                  decoration: const InputDecoration(
-                    border: UnderlineInputBorder(),
-                    labelText: 'นามสกุล',
+                  TextFormField(
+                    initialValue: "${d.lastname}",
+                    onSaved: (String? lastnameValue) {
+                      lastname = lastnameValue!;
+                    },
+                    decoration: const InputDecoration(
+                      border: UnderlineInputBorder(),
+                      labelText: 'นามสกุล',
+                    ),
                   ),
-                ),
-                TextFormField(
-                  initialValue: "${d.phone}",
-                  onSaved: (String? phoneValue) {
-                    phone = phoneValue!;
-                  },
-                  decoration: const InputDecoration(
-                    border: UnderlineInputBorder(),
-                    labelText: 'เบอร์โทร',
+                  TextFormField(
+                    initialValue: "${d.phone}",
+                    onSaved: (String? phoneValue) {
+                      phone = phoneValue!;
+                    },
+                    decoration: const InputDecoration(
+                      border: UnderlineInputBorder(),
+                      labelText: 'เบอร์โทร',
+                    ),
                   ),
-                ),
-                Dropdown(context, baseState, branchId, d.branch!.id!),
-              ],
+                  Dropdown(context, baseState, branchId, d.branch!.id!),
+                ],
+              ),
             ),
           ),
         ),
-      ),
-      actions: <Widget>[
-        TextButton(
-            onPressed: () => Navigator.pop(context, 'Cancel'),
-            child: const Text('Cancel')),
-        TextButton(
-          onPressed: () async {
-            if (formKey.currentState!.validate()) {
-              formKey.currentState!.save();
-              d.firstname = firstname;
-              d.lastname = lastname;
-              d.phone = phone;
-              d.branch!.id =
-                  branchIdActive == null ? d.branch!.id : branchIdActive;
-              await updateUser(d);
-              // setState(() {});
-            }
-          },
-          child: const Text('OK'),
-        ),
-      ],
-    );
+        actions: <Widget>[
+          TextButton(
+              onPressed: () => Navigator.pop(context, 'Cancel'),
+              child: const Text('Cancel')),
+          TextButton(
+            onPressed: () async {
+              if (formKey.currentState!.validate()) {
+                UserRepository userRepository = UserRepository();
+
+                var formData = FormData();
+                var file = await MultipartFile.fromFile(_imageFile!.path,
+                    filename: _imageFile!.name);
+                print(file);
+                formData.files.add(MapEntry(
+                  'locationFiles',
+                  file,
+                ));
+                var result = await userRepository.postImg(formData);
+                if (result.success ?? false) {
+                  print('Upload Success');
+                  print(result);
+
+                  formKey.currentState!.save();
+                  d.img_profile = result.data;
+                  d.firstname = firstname;
+                  d.lastname = lastname;
+                  d.phone = phone;
+                  d.branch!.id =
+                      branchIdActive == null ? d.branch!.id : branchIdActive;
+                  await updateUser(d);
+                }
+
+                // setState(() {});
+              }
+            },
+            child: const Text('OK'),
+          ),
+        ],
+      );
+    });
   }
 
   Future<void> updateUser(User edituser) async {
@@ -306,8 +429,7 @@ class _DataUserState extends State<DataUser> {
     if (isSuccess) {
       showSuccessMessage(context, 'แก้ไขสำเร็จ');
       await getUser();
-    } 
-    
+    }
   }
 
   Future<void> deleteUser(User deleteuser) async {
@@ -318,7 +440,6 @@ class _DataUserState extends State<DataUser> {
     } else {
       showErrorMessage(context, 'ลบไม่สำเร็จ');
     }
-    
   }
 
   Widget Dropdown(BuildContext context, BaseState baseState, int? branchId,
@@ -361,7 +482,5 @@ class _DataUserState extends State<DataUser> {
     });
   }
 }
-
-
 
 // ignore_for_file: unused_import, prefer_const_constructors_in_immutables, prefer_const_constructors, unused_field

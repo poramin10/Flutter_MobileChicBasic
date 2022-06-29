@@ -1,5 +1,8 @@
 // ignore_for_file: prefer_const_constructors, prefer_const_literals_to_create_immutables, sort_child_properties_last, unused_element, unused_local_variable, use_key_in_widget_constructors, unused_import, avoid_print, no_leading_underscores_for_local_identifiers, avoid_unnecessary_containers
 
+import 'dart:io';
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:project_mobile/config/routes/router.dart';
 import 'package:project_mobile/models/branch.dart';
@@ -11,7 +14,22 @@ import 'repositories/base/base_repository.dart';
 
 GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
+// ! Set Develop กรณี bad cercificate (กรณีการ Upload รูปภาพ)
+class MyHttpOverrides extends HttpOverrides {
+  @override
+  HttpClient createHttpClient(SecurityContext? context) {
+    return super.createHttpClient(context)
+      ..badCertificateCallback =
+          (X509Certificate cert, String host, int port) => true;
+  }
+}
+
 void main() {
+  // for develop mode only for bad cercificate
+  if (kDebugMode) {
+    HttpOverrides.global = new MyHttpOverrides();
+  }
+
   runApp(
     MultiProvider(
       providers: [
@@ -34,7 +52,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      navigatorKey: navigatorKey,
+        navigatorKey: navigatorKey,
         title: appTitle,
         onGenerateRoute: _routers.generateRoute,
         initialRoute: '/datauser',
